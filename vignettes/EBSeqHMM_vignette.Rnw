@@ -1,0 +1,638 @@
+%\VignetteIndexEntry{HMM}
+
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{graphicx, graphics, epsfig,setspace,amsmath, amsthm}
+\usepackage{hyperref}
+\usepackage{natbib}
+%\usepackage{listings}
+\usepackage{moreverb}
+\begin{document}
+\title{EBSeqHMM: An R package for identifying gene-expression changes in ordered RNA-seq experiments}
+\author{Ning Leng and Christina Kendziorski}
+\maketitle
+\tableofcontents
+\setcounter{tocdepth}{2}
+
+\section{Introduction}
+\label{sec:intro}
+EBSeqHMM (as detailed in \cite{Leng14}) is an empirical Bayesian approach that models a number of
+features observed in ordered RNA-seq experiments (time course,
+spatial course, etc.). 
+In an ordered RNA-seq experiment, of primary interest is characterizing how genes 
+are changing over time, space, gradient, etc. For example, an investigator 
+may be interested in genes that are monotonically increasing (or decreasing), that increase initially then
+decrease, that increase initially then remain unchanged, and so on. We refer to these 
+types of changes in expression hereinafter as expression paths.
+We classify expression paths into three main categories: (i) constant paths: expression remains 
+unchanged, or equally expressed (EE), over all conditions; (ii) sporadic paths: expression 
+shows some change between at least one pair of adjacent conditions, but remains unchanged 
+between at least one other pair; and (iii) dynamic paths: expression changes continuously. 
+
+EBSeqHMM provides functions for identifying differentially expressed (DE) genes 
+(genes that are not in category i),
+characterizing their changes over conditions, and clustering genes with similar paths.
+In EBSeqHMM, an autoregressive hidden Markov model is implemented to accommodate 
+dependence in gene expression across ordered conditions. 
+
+EBSeqHMM may also be used for inference regarding isoform expression.
+Importantly, for isoform level inference,
+EBSeqHMM directly accommodates isoform expression estimation uncertainty by
+modeling the differential variability observed in distinct groups of isoforms.
+In short, it is more challenging to estimate isoform expressions.
+There is decreased variability in some isoforms,
+but increased variability in the others, due to the relative increase in
+uncertainty inherent in estimating isoform expression when multiple isoforms of a given gene are
+present.  If this structure is not accommodated, there is reduced power for
+identifying isoforms in some groups of isoforms 
+as well as increased false discoveries in the other groups.
+Similar to EBSeq,
+EBSeqHMM directly models differential uncertainty
+as a function of $I_g$ providing a powerful approach for isoform level inference. 
+
+\section{The model}
+\subsection{EBSeqHMM model}
+EBSeqHMM requires estimates of gene or isoform expression collected over three or more
+ordered conditions.
+To simplify the presentation, we refer to ordered conditions
+as time points denoted by $t=1,2,\ldots,T$, noting that the method directly accommodates other
+ordered data structures (e.g. space, gradient, etc.).
+
+Let $\bf{X}_t$ be a $G \times N_t$ matrix of expression values for $G$ genes in $N_t$ subjects at time $t$.
+The full set of observed expression values is then denoted by $\bf{X}=\left(\bf{X}_1, \bf{X}_2, \ldots, 
+\bf{X}_T \right)$.  With a slight abuse of notation,
+let $\bf{X}_{g}$ denote one row of this matrix containing data for gene $g$ over time; $X_{gtn}$ denotes expression values for gene $g$ at time $t$ in sample $n$.
+Of interest are changes in the latent mean expression levels for gene $g$:
+$\mu_{g1}, \mu_{g2}, \ldots, \mu_{gT}$.
+We allow for three possibilities, or states, to describe such changes: Up, Down, EE.
+If $\mu_{t-1}<\mu_{t}$, we define state $S^{\Delta t}$ as Up; if $\mu_{t-1}>\mu_{t}$, $S^{\Delta t}$ is Down;
+and $\mu_{t-1}=\mu_{t}$ implies $S^{\Delta t}$ is EE.
+
+The main goals in an ordered RNA-seq experiment - identifying genes that change over time, and
+specifying each genes' expression path - can be restated as questions about these underlying
+states. In short, for each gene $g$ and each transition between $t-1$ and $t$,
+EBSeqHMM estimates the probability of each state at each transition. 
+%For further details on the model and parameter estimation, seeXXXX.
+
+\subsection{Getting a false discovery rate (FDR) controlled list of DE genes or isoforms}
+\label{sec:fdrlist}
+In an RNA-seq experiment with ordered conditions, DE genes (non-constant genes) are defined
+as those showing significant change in at least one condition.
+To obtain a list of DE genes with false discovery rate (FDR) controlled
+at $\alpha$, DE genes are the ones
+whose posterior probability (PP) of following the constant path is
+less than $\alpha$.
+Examples are provided in Section \ref{sec:startdetectde}.
+Isoform-based lists are obtained in the same way
+(examples are provided in Section \ref{sec:startdetectdeiso}).
+
+\subsection{Getting clusters of genes or isoforms following the same expression path}
+
+The most likely path of a DE gene is
+defined as the path with highest posterior probability.
+DE genes with confident assignments may be further grouped into
+gene clusters depending on their expression paths.
+By the default settings, a gene will be called as a confident assignment
+if the gene's maximum PP of belonging to a certain non-constant path 
+exceeds 0.5. 
+Examples are provided in Section \ref{sec:startgenecluster},
+And we note that the 0.5 threshold can be changed. This, too is discussed in Section \ref{sec:startgenecluster}.
+Isoform-based lists are obtained in the same way (examples are provided in Section \ref{sec:startisocluster}).
+
+
+
+
+\section{Quick start}
+
+\label{sec:quickstart}
+Before analysis can proceed, the EBSeq and EBSeqHMM package
+must be loaded into the working space:
+<<>>=
+library(EBSeq)
+library(EBSeqHMM)
+@
+
+\subsection{Gene level analysis}
+\subsubsection{Required inputs}
+\label{sec:startgenedeinput}
+\begin{flushleft}
+	{\bf Data}:  The object \verb+Data+ should be a $G-by-S$ matrix 
+	containing the expression values for each gene and each sample,
+	where $G$ is the number of genes and $S$ is the number of samples. These
+	values should exhibit estimates of gene expression, without normalization
+	across samples. Counts of this nature may be obtained from RSEM (\cite{Li11b}),
+	Cufflinks (\cite{Trapnell12}), or a similar approach.
+
+	\vspace{5 mm}
+
+	{\bf Conditions}:  The object \verb+Conditions+ should be a factor of 
+	length $S$ that indicates to which condition each sample belongs.
+	Note the order of levels in the factor should represent the order in the RNA-seq experiments.
+	For example
+
+\noindent The object \verb+GeneExampleData+ is a simulated data matrix containing
+100 rows of genes and 15 columns of samples. The genes are named
+\verb+Gene_1, Gene_2 ...+
+<<>>=
+data(GeneExampleData)
+str(GeneExampleData)
+@
+
+Here we simulated triplicates for 5 time points (conditions). 
+To specify which condition each sample belongs,
+we define:
+<<>>=
+CondVector <- rep(paste("t",1:5,sep=""),each=3)
+print(CondVector)
+@
+
+Downstream analysis by EBSeqHMM requires the conditions to be specified as a factor.
+In particular, levels of the factor need to be sorted along the time/spatial course.
+For example, to generate a factor with ordered conditions from t1 to t5,
+we define:
+<<>>=
+Conditions <- factor(CondVector, levels=c("t1","t2","t3","t4","t5"))
+str(Conditions)
+levels(Conditions)
+@
+
+
+\end{flushleft}
+
+\subsubsection{Library size factor}
+\label{sec:startgenedesize}
+EBSeqHMM requires library size factors to adjust for sequencing depth differences among
+different samples.
+Here, the library size factors may be obtained via the function \verb+MedianNorm+, which reproduces the median normalization approach
+in DESeq \citep{Anders10}.
+<<>>=
+Sizes <- MedianNorm(GeneExampleData)
+@
+
+\noindent If quantile normalization is preferred, library size factors
+may be obtained via the function \verb+QuantileNorm+
+(e.g. \verb+QuantileNorm(GeneMat,.75)+ for Upper-Quantile Normalization in \cite{Bullard10}).
+
+\subsubsection{Visualizing genes of interest}
+\label{sec:startvisual}
+A user may want to look at expression paths of genes of interest prior to the analysis.
+EBSeqHMM provides the function \verb+GetNormalizedMat+ 
+to generate the normalized matrix and the function \verb+PlotExp+
+to generate longitudinal plots over the ordered conditions.
+
+The normalized matrix may be obtained by :
+<<>>=
+GeneNormData <- GetNormalizedMat(GeneExampleData, Sizes)
+@
+
+Suppose we are particularly interested in \verb+Gene_23+,
+we may apply:
+\begin{figure}[h!]
+\centering
+\setkeys{Gin}{width=0.5\textwidth}
+<<eval=TRUE, fig=TRUE>>=
+PlotExp(GeneNormData, Conditions, Name="Gene_23")
+@
+\caption{Expression profile of Gene 23}
+\label{fig:Gene6}
+\end{figure}
+
+
+
+\subsubsection{Running EBSeqHMM on gene expression estimates}
+\label{sec:startgenederun}
+Function \verb+EBSeqHMMTest+ may be used to estimate parameters and the posterior probability (PP) of
+being in each expression path.
+For example, here we run five iterations of the Baum-Welch algorithm by setting
+\verb+UpdateRd=5+.
+Note that in practice,
+additional iterations are usually required; and please note this may take several minutes).
+
+<<eval=TRUE,results=hide>>=
+EBSeqHMMGeneOut <- EBSeqHMMTest(Data=GeneExampleData, sizeFactors=Sizes, Conditions=Conditions,
+			     UpdateRd=5)
+@
+
+\subsubsection{Detection of DE genes and inference of gene's most likely path} 
+\label{sec:startdetectde}
+\noindent Function \verb+GetDECalls+ may be used to detect DE genes under a target
+FDR. DE genes are defined
+as those showing significant change in at least one condition.
+Under a target FDR = 0.05, we call genes with PP(remain constant)$<$ 0.05 as DE genes.
+
+<<>>=
+GeneDECalls <- GetDECalls(EBSeqHMMGeneOut, FDR=.05)
+head(GeneDECalls)
+str(GeneDECalls)
+@
+The output \verb+GeneDECalls+ is a matrix with two columns. The first column shows a gene's most likely path 
+(the path with highest PP). And the second column shows PP(most likely path) for each gene. 
+The higher the PP is, the more likely that this gene is following the particular path.
+Rows are genes that are defined as DE.
+Here we identified 60 genes as DE under 5\% target FDR.
+To check whether a particular gene is detected and its most likely path, a user
+may apply the codes below (we use Gene 23 as an example).
+
+<<>>=
+"Gene_23"%in%rownames(GeneDECalls)
+GeneDECalls["Gene_23",]
+@
+
+Here we can see the most likely path of Gene 23 is Down-Down-Down-Down, and the posterior probability of being in that path is 53.8\%.
+\label{sec:cluster}
+
+\subsubsection{Clustering DE genes into expression paths}
+\label{sec:startgenecluster}
+To cluster DE genes into expression paths, we consider DE genes with confident assignments.
+By default, a gene will be called as a confident assignment to its most likely path if
+its maximum PP is greater than 0.5. A user may change this threshold by specifying \verb+cutoff+.
+By default, only dynamic paths are shown (recall that dynamic paths are those for which expression
+changes over all transitions). A user may specify \verb+OnlyDynamic=FALSE+ if sporadic paths
+are of interest as well.
+
+<<>>=
+GeneConfCalls <- GetConfidentCalls(EBSeqHMMGeneOut, FDR=.05,cutoff=.5, OnlyDynamic=TRUE)
+#str(GeneConfCalls$EachPath)
+print(GeneConfCalls$EachPath[1:4])
+@
+
+\verb+GeneConfCalls$EachPath+ shows DE genes that are 
+classified into each dynamic path.
+Different clusters are shown in different sub-lists.
+Columns here are defined similarly as that in section \ref{sec:startdetectde}.
+Genes shown are the DE genes (FDR $\le$5\%) with PP(most likely path) $\ge$ 0.5
+for each path.
+Here we print only 4 paths for demonstration purposes. 
+It shows that only one gene is clustered into each of Up-Up-Up-Up, Down-Up-Up-Up and Up-Down-Up-Up.
+12 genes are clustered into the Down-Down-Up-Up path.
+
+If we are interested in the 4th path particularly, we might select the cluster by
+
+<<>>=
+Path4 <- GeneConfCalls$EachPath[["Down-Down-Up-Up"]]
+print(Path4)
+@
+
+The combined list, number of genes in each cluster and list of gene names in each cluster
+may be obtained by \verb+GeneConfCalls$Overall+, \verb+GeneConfCalls$NumEach+ and
+\verb+GeneConfCalls$EachPathNames+:
+<<>>=
+head(GeneConfCalls$Overall)
+print(GeneConfCalls$NumEach)
+str(GeneConfCalls$EachPathNames)
+@
+If we want to get names of the genes in Down-Down-Down-Down cluster, we may apply:
+<<>>=
+GeneConfCalls$EachPathNames["Down-Down-Down-Down"]
+@
+
+We can see that in addition to Gene 23, there are 3 other genes been clustered into the Down-Down-Down-Down path.
+
+\subsection{Isoform level analysis}
+\label{sec:startisode}
+\subsubsection{Required inputs}
+\label{sec:startisodeinput}
+
+\begin{flushleft}
+	{\bf Data}:   The object \verb+Data+ should be an $I-by-S$ matrix containing the expression values for each isoform and each sample,
+	where $I$ is the number of isoforms and $S$ is the number of samples. 
+	As in the gene-level analysis, these values should exhibit estimates of isoform expression, without normalization
+	across samples.
+
+	\vspace{5 mm}
+
+	{\bf Conditions}:  The object \verb+Conditions+ should be a factor with 
+	length $S$ to indicate the condition of each sample.
+	Note the order of levels in the factor should represent the order in the RNA-seq experiment.
+	An example may be found in Section \ref{sec:startgenedeinput}.
+
+	\vspace{5 mm}
+
+	{\bf IsoformNames}:   The object \verb+IsoformNames+ should be a vector with length $I$ to indicate the isoform names.
+
+	\vspace{5 mm}
+
+	{\bf IsosGeneNames}:  The object \verb+IsosGeneNames+ should be a vector with length $I$ to indicate the gene name of each isoform
+	(in the same order as \verb+IsoformNames+).
+\end{flushleft}
+
+\noindent \verb+IsoExampleList+ contains 200 simulated isoforms,
+in which \verb+IsoExampleList$IsoExampleData+ is a data matrix containing
+200 rows of isoforms and 15 columns of samples;
+\verb+IsoExampleList$IsoNames+ contains the isoform names;
+\verb+IsoExampleList$IsosGeneNames+ contains the names of the genes to which
+the isoforms belongs to.
+<<>>=
+data(IsoExampleList)
+str(IsoExampleList)
+IsoExampleData <- IsoExampleList$IsoExampleData
+str(IsoExampleData)
+IsoNames <- IsoExampleList$IsoNames
+IsosGeneNames <- IsoExampleList$IsosGeneNames
+@
+
+\subsubsection{Library size factor}
+\label{sec:startisodesize}
+Similar to the gene-level analysis presented above, we may obtain the isoform-level
+library size factors via \verb+MedianNorm+:
+<<>>=
+IsoSizes <- MedianNorm(IsoExampleData)
+@
+
+\subsubsection{The $I_g$ vector}
+\label{sec:startisodeNg}
+
+While working on isoform level data, EBSeqHMM fits different prior
+parameters for different uncertainty groups (defined as $I_g$ groups).
+The default setting to define the uncertainty groups consists of using
+the number of isoforms the host gene contains ($N_g$) for each isoform.
+The default settings will provide three uncertainty groups:
+
+$I_g=1$ group: Isoforms with $N_g=1$;
+
+$I_g=2$ group: Isoforms with $N_g=2$;
+
+$I_g=3$ group: Isoforms with $N_g \geq 3$.
+
+The $N_g$ and $I_g$ group assignment can be obtained using the function \verb+GetNg+.
+The required inputs of \verb+GetNg+ are the isoform names (\verb+IsoformNames+) and
+their corresponding gene names (\verb+IsosGeneNames+). If RSEM is used for quantification,
+such information may be found in file \verb+sample_name.isoforms.results+.
+<<>>=
+NgList <- GetNg(IsoNames, IsosGeneNames)
+IsoNgTrun <- NgList$IsoformNgTrun
+IsoNgTrun[c(1:3,101:103,161:163)]
+@
+
+A user may group the isoforms into more than 3 groups by defining the parameter \verb+TrunThre+ 
+in the \verb+GetNg+ function.
+
+\subsubsection{Running EBSeqHMM on isoform expression estimates}
+\label{sec:startisoderun}
+Here we have 5 time points with triplicates for each. 
+The condition factor may be defined as in section \ref{sec:startgenedeinput}:
+<<>>=
+CondVector <- rep(paste("t",1:5,sep=""),each=3)
+Conditions <- factor(CondVector, levels=c("t1","t2","t3","t4","t5"))
+str(Conditions)
+@
+Function \verb+EBSeqHMMTest+ may be used to estimate parameters and PP's
+on isoform level data as well.
+In isoform level analysis, we need to specify \verb+NgV+ to define the uncertainty groups of isoforms.
+Here we run five iterations of the Baum-Welch algorithm by setting
+\verb+UpdateRd=5+.
+
+<<eval=TRUE,results=hide>>=
+EBSeqHMMIsoOut <- EBSeqHMMTest(Data=IsoExampleData,
+			    NgVector=IsoNgTrun,
+			    sizeFactors=IsoSizes, Conditions=Conditions,
+			    UpdateRd=5)
+@
+
+\subsubsection{Detection of DE isoforms and inference of isoform's most likely path}
+\label{sec:startdetectdeiso}
+Similar to the gene level analyses, 
+Function \verb+GetDECalls+ may be used to detect DE isoforms under a target
+FDR as well. DE isoforms are defined
+as those showing significant change in at least one condition.
+Under a target FDR = 0.05, we call isoforms with PP(remain constant)$<$ 0.05 as DE isoforms.
+
+
+<<>>=
+IsoDECalls <- GetDECalls(EBSeqHMMIsoOut, FDR=.05)
+str(IsoDECalls)
+head(IsoDECalls)
+@
+The output \verb+IsoDECalls+ is a matrix with two columns. The first column shows an 
+isoform's most likely path
+(the path with highest PP). And the second column shows PP(most likely path) for each isoform.
+Rows are isoforms that are defined as DE.
+Here we identified 123 isoforms as DE under 5\% target FDR.
+
+
+
+\subsubsection{Clustering DE isoforms into expression paths}
+\label{sec:startisocluster}
+Similar to the gene level analyses,
+function \verb+GetConfidentCalls+ may be used to cluster isoforms into clusters with similar 
+expression profiles.
+
+<<>>=
+IsoConfCalls <- GetConfidentCalls(EBSeqHMMIsoOut, FDR=.05)
+head(IsoConfCalls$Overall)
+str(IsoConfCalls$EachPath[1:4])
+str(IsoConfCalls$EachPathNames)
+@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{More detailed examples}
+
+\subsection{Working on a subset of paths}
+
+In the clustering step, a user may define a subset of paths of primary 
+interest to simplify the output list of \verb+GetConfidentCalls+ function.
+By doing so, \verb+GetConfidentCalls+ function will only identify genes following
+the selected paths.
+
+To get paths of interest, function \verb+GetAllPaths+ may be used to get all possible patterns in
+the experiment:
+<<>>=
+AllPaths <- GetAllPaths(EBSeqHMMGeneOut)
+print(AllPaths)
+@
+
+The default settings in \verb+GetAllPaths+ will return only dynamic paths (16 paths here). To obtain a
+list for all paths (including constant path and sporadic paths, for a total of 81 paths here), a user may
+define \verb+OnlyDynamic=FALSE+:
+
+<<>>=
+AllPathsWithEE <- GetAllPaths(EBSeqHMMGeneOut, OnlyDynamic=FALSE)
+print(AllPathsWithEE)
+@
+
+Assume we are only interested in the monotone increasing path and monotone decreasing
+path (1st and 16th in the list of dynamic paths), we may define \verb+Paths=AllPaths[c(1,16)]+
+in \verb+GetConfidentCalls+ function to obtain the simplified list:
+<<>>=
+GeneConfCallsTwoPaths <- GetConfidentCalls(EBSeqHMMGeneOut, FDR=.05, Paths=AllPaths[c(1,16)])
+print(GeneConfCallsTwoPaths)
+@
+
+The output object only contains information of clusters associated with these two paths.
+We have 1 and 4 genes clustered into the monotone increasing and decreasing cluster,
+respectively.
+
+\subsection{Data visualization}
+As introduced in section \ref{sec:startvisual}, 
+EBSeqHMM also provides functions to visualize genes/isoforms of interest.
+Prior to generating the plots, we first need to obtain a normalized expression matrix that adjusts
+for library sizes.
+The normalized matrix may be obtained by the \verb+GetNormalizedMat+ function:
+<<>>=
+GeneNormData <- GetNormalizedMat(GeneExampleData, Sizes)
+@
+
+Then function \verb+PlotExp+ may be used to visualize gene/isoform expression patterns 
+across ordered conditions.
+For example, suppose we are interested in genes following the same path as Gene 23 (Down-Down-Down-Down) in our simulated data.
+To get genes that were clustered into this path, we may use the codes below:
+<<>>=
+print(GeneConfCallsTwoPaths$EachPath[["Down-Down-Down-Down"]])
+GeneOfInterest <- GeneConfCallsTwoPaths$EachPathNames[["Down-Down-Down-Down"]]
+print(GeneOfInterest)
+@
+
+\begin{figure}[h!]
+	\centering
+<<eval=TRUE, fig=TRUE>>=
+par(mfrow=c(2,2))
+for(i in 1:4)PlotExp(GeneNormData, Conditions, Name=GeneOfInterest[i])
+@
+\caption{Genes in monotone decreasing cluster}
+\label{fig:GeneDown}
+\end{figure}
+\clearpage
+
+\subsection{Diagnostic plots}
+As in EBSeq, EBSeqHMM also relies on parametric assumptions that should be checked following analysis.
+Two functions from the EBSeq package may be used to check the fit of the EBSeqHMM model.
+The \verb+QQP+ function generates Q-Q plot of the empirical $q$'s vs.
+simulated $q$'s from the Beta prior distribution with estimated
+hyper-parameters.
+Figure \ref{fig:GeneQQP} shows an example on gene level data.
+Note in Figure \ref{fig:GeneQQP}, only a small set of genes are considered here for demonstration purposes.
+Much better fitting should be expected while
+using the full set of genes.
+For examples of reasonable diagnostics, see Figure \ref{fig:CaseDenNHist}.
+\begin{figure}[h!]
+\centering
+<<eval=TRUE, fig=TRUE>>=
+par(mfrow=c(3,2))
+QQP(EBSeqHMMGeneOut,GeneLevel=TRUE)
+@
+\caption{Q-Q plots for checking the assumption of a Beta prior within each condition (on gene level data).
+Note only a small set of genes are considered here for demonstration purposes. Much better fitting should be expected while
+using the full set of genes. For examples of reasonable diagnostics, see Figure \ref{fig:CaseDenNHist}.
+}
+\label{fig:GeneQQP}
+\end{figure}
+\clearpage
+
+Likewise, the \verb+DenNHist+ function may be used to check the density plot
+of empirical $q$'s vs. simulated $q$'s from the fitted Beta prior.
+Figure \ref{fig:GeneDenNHist} shows an example on gene level data.
+
+\begin{figure}[h!]
+\centering
+<<eval=TRUE, fig=TRUE>>=
+par(mfrow=c(3,2))
+DenNHist(EBSeqHMMGeneOut, GeneLevel=TRUE)
+@
+\caption{Density plots and histograms for checking the assumption of a Beta prior within each condition 
+(on gene level data). Note only a small set of genes are considered here for demonstration purposes. Much better fitting should be expected while
+using the full set of genes. For examples of reasonable diagnostics, see Figure \ref{fig:CaseDenNHist}.
+}
+\label{fig:GeneDenNHist}
+\end{figure}
+\clearpage
+
+Figure \ref{fig:IsoQQP} and \ref{fig:IsoDenNHist} show similar plots on isoform level analysis.
+
+\begin{figure}[h!]
+\centering
+<<eval=TRUE, fig=TRUE>>=
+par(mfrow=c(4,4))
+QQP(EBSeqHMMIsoOut)
+@
+\caption{Q-Q plots for checking the assumption of a Beta prior within each condition (on isoform level data).
+Note only a small set of isoforms are considered here for demonstration purposes. Much better fitting should be expected while
+using the full set of isoforms.
+For examples of reasonable diagnostics, see Figure \ref{fig:CaseDenNHist}}
+\label{fig:IsoQQP}
+\end{figure}
+\clearpage
+
+\begin{figure}[h!]
+\centering
+<<eval=TRUE, fig=TRUE>>=
+par(mfrow=c(4,4))
+DenNHist(EBSeqHMMIsoOut)
+@
+\caption{Density plots and histograms for checking the assumption of a Beta prior within each condition 
+(on isoform level data).
+Note only a small set of isoforms are considered here for demonstration purposes. Much better fitting should be expected while
+using the full set of isoforms.
+For examples of reasonable diagnostics, see Figure \ref{fig:CaseDenNHist}}
+\label{fig:IsoDenNHist}
+\end{figure}
+\clearpage
+
+
+
+\begin{figure}[h]
+\centerline{
+\includegraphics[width=.9\textwidth]{Diag_EBSeqHMM.pdf}}
+\caption{
+Shown are model diagnostic plots on a case study data set
+(a) Shown are the histograms of empirical $q$'s estimated within
+each condition and
+the fitted Beta densities using that same data.
+(b) Shown are
+estimated $q$'s
+and the same number of points
+simulated from the Beta prior.
+}
+	\label{fig:CaseDenNHist}
+\end{figure}
+
+
+\clearpage
+\subsection{Using mappability ambiguity clusters instead of
+the $I_g$ vector when the gene-isoform relationship is unknown}
+\label{sec:detailedisodeNoNg}
+When working with a de-novo assembled transcriptome, in which case the gene-isoform
+relationship is unknown,
+a user can use read mapping ambiguity cluster information instead of Ig,
+as provided by RSEM \citep{Li11b} in the
+output file \verb+output_name.ngvec+. The file contains a vector with the same 
+length as the total number of transcripts.
+Each transcript has been assigned to one of 3 levels
+(1, 2, or 3) to indicate the mapping uncertainty level of that transcript.
+The mapping ambiguity clusters are partitioned via a k-means algorithm on the unmappability
+scores that are provided by RSEM.  A user can read in the mapping ambiguity cluster information
+using:
+
+<<eval=FALSE>>=
+IsoNgTrun <- scan(file="output_name.ngvec", what=0, sep="\n")
+@
+
+More details on using the RSEM-EBSeq pipeline
+on de novo assembled transcriptomes can be found
+at 
+
+\url{http://deweylab.biostat.wisc.edu/rsem/README.html#de}.
+
+Other unmappability scores and other cluster methods (e.g. Gaussian Mixture Model)
+could also be used to form the uncertainty clusters.
+Also, the number of uncertainty groups is not limited to 3. A user may consider grouping isoforms into
+more than 3 groups if needed.
+
+
+\vspace{1cm}
+More details can be found in the EBSeq vignette:
+
+\url{http://www.bioconductor.org/packages/devel/bioc/vignettes/EBSeq/inst/doc/EBSeq_Vignette.pdf}
+
+
+
+
+
+\vspace{1cm}
+\bibliographystyle{natbib}
+
+
+\bibliography{lengetal}
+
+\end{document}

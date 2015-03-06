@@ -1,0 +1,4 @@
+export(EBTest_ext,EBHMMNBfunForMulti,EBHMMNBMultiEM_2chain,EBHMMNBfun,beta.mom,
+LikefunNBHMM, f0, GetDECalls, GetConfidentCalls, EBSeqHMMTest,
+GetAllPaths,PlotExp)
+import(EBSeq)

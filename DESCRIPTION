@@ -1,0 +1,19 @@
+Package: EBSeqHMM
+Type: Package
+Title: Bayesian analysis for identifying gene or isoform expression
+        changes in ordered RNA-seq experiments
+Version: 1.1.0
+Date: 2014-10-10
+Author: Ning Leng, Christina Kendziorski
+Depends: EBSeq
+Maintainer: Ning Leng <nleng@wisc.edu>
+Description: The EBSeqHMM package implements an auto-regressive hidden Markov model for statistical analysis in ordered RNA-seq experiments (e.g. time course or spatial course data). The EBSeqHMM package provides functions to identify genes and isoforms that have non-constant expression profile over the time points/positions, and cluster them into expression paths.
+License: Artistic-2.0
+Collate: 'EBTest_ext.R' 'EBHMMNBfunForMulti.R' 'EBHMMNBfun.R'
+        'EBHMMNBMultiEM_2chain.R' 'f0.R' 'LikefunNBHMM.R' 'beta.mom.R'
+        'EBSeqHMMTest.R' 'GetConfidentCalls.R' 'GetDECalls.R'
+        'GetAllPaths.R' 'PlotExp.R'
+BuildVignettes: yes
+biocViews: StatisticalMethod, DifferentialExpression,
+        MultipleComparison, RNASeq, Sequencing, GeneExpression,
+        Bayesian, HiddenMarkovModel, TimeCourse
