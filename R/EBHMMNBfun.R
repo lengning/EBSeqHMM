@@ -611,6 +611,10 @@ names(WhichMax)=names(LogPostSum)=
 names(PostSum)=rownames(AlllogPost)=
 NameOut
 
+tmp=AllPosi
+tmpL=levels(tmp[[1]])
+qq=sapply(1:nrow(tmp),function(i)paste0(tmpL[as.numeric(tmp[i,])],collapse="-"))
+colnames(PP)=qq
 
 out <- list(MAPTerm=MatTerm, MAPTermNum=MatTermNum,
 				 AllTerm=AllPosi, PP=PP, WhichMax=WhichMax, Allf=AlllogPost,
