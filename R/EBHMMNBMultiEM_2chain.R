@@ -112,6 +112,10 @@ PenalizeLowMed=TRUE, PenalizeLowMedQt=.1,PenalizeLowMedVal=10){
 		StateNameList[[1]] <- c("Up","EE","Down")
 		StateNameList[[2]] <- c("Up","Down")
 		UpParam <- c(FALSE,TRUE)
+		if(UpdateRd==0){
+		UpParam <- c(FALSE, FALSE)
+		UpdateRd <- 1
+		}
 
 
 ######################
