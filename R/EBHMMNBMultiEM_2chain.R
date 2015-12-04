@@ -271,7 +271,7 @@ for(i in 1:NumGp){
 		PostLikeLog_BG <- EachLike64[[1]] 
 		PostLike_BG <- exp(PostLikeLog_BG) # P(path)P(Data|Path) in background chain
 		PostLikeMerge <- PostLike_BG*PI.up[1] # P(backgroud)P(Data|Background, path)
-		colnames(PostLikeMerge) <- StateNameList[[1]]
+		if(ncol(PostLikeMerge)==length(StateNameList[[1]]))colnames(PostLikeMerge) <- StateNameList[[1]]
 		# assume P(Data|path,signal) for EE related pathes are 0
 		for(i in colnames(EachLike64[[2]]))PostLikeMerge[,i] <- PostLikeMerge[,i]+PI.up[2]*exp(EachLike64[[2]][,i])
 		PPMerge <- PostLikeMerge/rowSums(PostLikeMerge)
