@@ -3,7 +3,7 @@
 #' @usage EBSeqHMMTest(Data, 
 #'	NgVector=NULL, Conditions, AllTran=NULL, 
 #'	AllPi0=NULL, Terms=NULL,  
-#'	sizeFactors, NumTranStage=c(3,2),FCV=seq(1.4,2,.2), 
+#'	sizeFactors, NumTranStage=c(3,2),FCV=3, 
 #'	homo=FALSE, UpdateRd=10, PIBound=.9, UpdatePI=FALSE,
 #'	Print=FALSE,WithinCondR=TRUE,Qtrm=.75,QtrmCut=10,
 #'	PenalizeLowMed=TRUE, PenalizeLowMedQt=.1,PenalizeLowMedVal=10)
@@ -13,8 +13,9 @@
 #' @param AllTran initial values for transition matrices
 #' @param AllPi0 initial values for starting probabilities
 #' @param Terms Terms
-#' @param FCV candidate values for expected FC. Default is (1.4 1.6 1.8 2.0). If user
-#' wants to specify a certain expected FC (say 1.5), he/she may define FCV as a number (e.g. FCV=1.5).
+#' @param FCV candidate values for expected FC. Default is 3.  If user
+#' wants to search through a list of candidate FCs, he/she may define FCV as a vector. e.g. By defining FCV=seq(1.4,2,.2), the function 
+#' will search over (1.4 1.6 1.8 2.0). Note that searching over a number of candidate FCs will increase the running time.
 #' @param sizeFactors a vector indicates library size factors
 #' @param NumTranStage number of states in two chains
 #' @param homo whether the chain is assumed to be homogenious
@@ -74,7 +75,7 @@ EBSeqHMMTest <- function(Data,
 												AllTran=NULL, 
 												AllPi0=NULL, Terms=NULL,  
 												sizeFactors, NumTranStage=c(3,2)
-												,FCV=seq(1.4,2,.2), 
+												,FCV=3, 
 												homo=FALSE, UpdateRd=10,
 												 PIBound=.9, UpdatePI=FALSE,Print=FALSE
 												,WithinCondR=TRUE,Qtrm=.75,QtrmCut=10,
