@@ -488,7 +488,7 @@ print(GeneOfInterest)
 	\centering
 <<eval=TRUE, fig=TRUE>>=
 par(mfrow=c(2,2))
-for(i in 1:4)PlotExp(GeneNormData, Conditions, Name=GeneOfInterest[i])
+for(i in 1:3)PlotExp(GeneNormData, Conditions, Name=GeneOfInterest[i])
 @
 \caption{Genes in monotone decreasing cluster}
 \label{fig:GeneDown}
