@@ -264,7 +264,7 @@ Genes shown are the DE genes (FDR $\le$5\%) with PP(most likely path) $\ge$ 0.5
 for each path.
 Here we print only 4 paths for demonstration purposes. 
 It shows that only one gene is clustered into each of Up-Up-Up-Up, Down-Up-Up-Up and Up-Down-Up-Up.
-12 genes are clustered into the Down-Down-Up-Up path.
+7 genes are clustered into the Down-Down-Up-Up path.
 
 If we are interested in the 4th path particularly, we might select the cluster by
 
@@ -286,7 +286,7 @@ If we want to get names of the genes in Down-Down-Down-Down cluster, we may appl
 GeneConfCalls$EachPathNames["Down-Down-Down-Down"]
 @
 
-We can see that in addition to Gene 23, there are 3 other genes been clustered into the Down-Down-Down-Down path.
+We can see that in addition to Gene 23, there are 2 other genes been clustered into the Down-Down-Down-Down path.
 
 \subsection{Isoform level analysis}
 \label{sec:startisode}
