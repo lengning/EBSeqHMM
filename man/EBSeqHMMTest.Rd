@@ -5,7 +5,7 @@
 EBSeqHMMTest(Data,
 	NgVector=NULL, Conditions, AllTran=NULL,
 	AllPi0=NULL, Terms=NULL,
-	sizeFactors, NumTranStage=c(3,2),FCV=seq(1.4,2,.2),
+	sizeFactors, NumTranStage=c(3,2),FCV=2,
 	homo=FALSE, UpdateRd=10, PIBound=.9, UpdatePI=FALSE,
 	Print=FALSE,WithinCondR=TRUE,Qtrm=.75,QtrmCut=10,
 	PenalizeLowMed=TRUE, PenalizeLowMedQt=.1,PenalizeLowMedVal=10)
@@ -25,10 +25,10 @@ EBSeqHMMTest(Data,
 
   \item{Terms}{Terms}
 
-  \item{FCV}{candidate values for expected FC. Default is
-  (1.4 1.6 1.8 2.0). If user wants to specify a certain
-  expected FC (say 1.5), he/she may define FCV as a number
-  (e.g. FCV=1.5).}
+  \item{FCV}{candidate values for expected FC. Default is 2.
+  If user wants to search through a list of candidate FCs, he/she may define FCV as a vector. 
+  e.g. By defining FCV=seq(1.4,2,.2), the function 
+will search over (1.4 1.6 1.8 2.0). Note that searching over a number of candidate FCs will increase the running time.}
 
   \item{sizeFactors}{a vector indicates library size
   factors}
