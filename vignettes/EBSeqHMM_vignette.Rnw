@@ -229,7 +229,7 @@ The output \verb+GeneDECalls+ is a matrix with two columns. The first column sho
 (the path with highest PP). And the second column shows PP(most likely path) for each gene. 
 The higher the PP is, the more likely that this gene is following the particular path.
 Rows are genes that are defined as DE.
-Here we identified 60 genes as DE under 5\% target FDR.
+Here we identified 53 genes as DE under 5\% target FDR.
 To check whether a particular gene is detected and its most likely path, a user
 may apply the codes below (we use Gene 23 as an example).
 
@@ -407,7 +407,7 @@ The output \verb+IsoDECalls+ is a matrix with two columns. The first column show
 isoform's most likely path
 (the path with highest PP). And the second column shows PP(most likely path) for each isoform.
 Rows are isoforms that are defined as DE.
-Here we identified 123 isoforms as DE under 5\% target FDR.
+Here we identified 106 isoforms as DE under 5\% target FDR.
 
 
 
